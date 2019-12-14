@@ -17,15 +17,14 @@ namespace EwsDemodulator
 
 			var render = new EwsSampleDemodulator(capture.WaveFormat.SampleRate);
 			render.MassegeReceived += m => Console.WriteLine($@"
-==== EWSブロック受信 ===
+==== EWSブロック受信({m.BlockId}) ===
 Type: {m.MessageType}
 Area: {m.AreaName}
-Time: {m.Time.ToDateTime():yyyy/MM/dd HH時}
+Time:{(m.Time.IsRealtime ? " " : "*")}{m.Time.ToDateTime():yyyy/MM/dd HH時}
 =======================
 ");
 
 			ulong index = 0;
-			//using var wWriter = new WaveFileWriter("capture.wav", WaveFormat.CreateIeeeFloatWaveFormat(capture.WaveFormat.SampleRate, 1));
 			capture.DataAvailable += (s, e) =>
 			{
 				var array = WaveToSampleAray(e.Buffer, e.BytesRecorded);
