@@ -1,6 +1,4 @@
-﻿using NAudio.Dsp;
-using NAudio.Wave;
-using System;
+﻿using System;
 
 namespace EwsDemodulator
 {
@@ -8,26 +6,23 @@ namespace EwsDemodulator
 	{
 		public event Action<EwsMessage> MassegeReceived;
 
-		private BiQuadFilter Filter { get; }
 		private EwsParser Parser { get; }
 
-		public EwsSampleDemodulator(WaveFormat format)
+		public EwsSampleDemodulator(int sampleRate)
 		{
-			WaveFormat = format;
-			Filter = BiQuadFilter.LowPassFilter(WaveFormat.SampleRate, 3000, 1);
-			Filter.SetHighPassFilter(WaveFormat.SampleRate, 250, 1);
+			SampleRate = sampleRate;
 			Parser = new EwsParser();
 			Parser.MassegeReceived += m => MassegeReceived?.Invoke(m);
 		}
 
-		public WaveFormat WaveFormat { get; }
-		public uint EwsBitCount => (uint)(WaveFormat.SampleRate / 64);
-		public uint FrequencyChangeCount => (uint)(WaveFormat.SampleRate / (64 * 4));
+		public int SampleRate { get; }
+		public uint EwsBitCount => (uint)(SampleRate / 64);
+		public uint FrequencyChangeCount => (uint)(SampleRate / (64 * 4));
 
 		// 許容する誤差
 		public const uint BitSampleTolerance = 10;
-		public uint LowBitSampleCount => (uint)(WaveFormat.SampleRate / 640);
-		public uint HighBitSampleCount => (uint)(WaveFormat.SampleRate / 1024);
+		public uint LowBitSampleCount => (uint)(SampleRate / 640);
+		public uint HighBitSampleCount => (uint)(SampleRate / 1024);
 
 		int minVolumeSampleCount = 0;
 
@@ -73,10 +68,7 @@ namespace EwsDemodulator
 		private bool? StableWaveState { get; set; }
 		public void Parse(ulong startIndex, float[] buffer, int offset, int readed)
 		{
-			for (var i = 0; i < readed; i++)
-				buffer[offset + i] = Filter.Transform(buffer[offset + i]);
-
-			var silenceTimeSampleCount = WaveFormat.SampleRate;
+			var silenceTimeSampleCount = SampleRate;
 			for (int i = 0; i < readed; i++)
 			{
 				var currentWave = buffer[offset + i];

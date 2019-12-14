@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Dsp;
+using NAudio.Wave;
 using System;
 
 namespace EwsDemodulator
@@ -10,7 +11,11 @@ namespace EwsDemodulator
 			using var capture = new WasapiLoopbackCapture();
 			capture.RecordingStopped += (s, e) => Console.WriteLine("Capture Stopped!");
 
-			var render = new EwsSampleDemodulator(WaveFormat.CreateIeeeFloatWaveFormat(capture.WaveFormat.SampleRate, 1));
+			// LPF / HPF
+			var filter = BiQuadFilter.LowPassFilter(capture.WaveFormat.SampleRate, 3000, 1);
+			filter.SetHighPassFilter(capture.WaveFormat.SampleRate, 250, 1);
+
+			var render = new EwsSampleDemodulator(capture.WaveFormat.SampleRate);
 			render.MassegeReceived += m => Console.WriteLine($@"
 ==== EWSブロック受信 ===
 Type: {m.MessageType}
@@ -24,7 +29,11 @@ Time: {m.Time.ToDateTime():yyyy/MM/dd HH時}
 			capture.DataAvailable += (s, e) =>
 			{
 				var array = WaveToSampleAray(e.Buffer, e.BytesRecorded);
-				//wWriter.WriteSamples(array, 0, array.Length);
+
+				// フィルタの適用
+				for (var i = 0; i < array.Length; i++)
+					array[i] = filter.Transform(array[i]);
+
 				render.Parse(index, array, 0, array.Length);
 				index += (uint)array.Length;
 			};
